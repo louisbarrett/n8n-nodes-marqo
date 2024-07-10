@@ -1,0 +1,20 @@
+{
+    "node": "n8n-nodes-base.marqo",
+    "nodeVersion": "1.0",
+    "codexVersion": "1.0",
+    "categories": [
+      "Search"
+    ],
+    "resources": {
+      "credentialDocumentation": [
+        {
+          "url": "https://docs.marqo.ai/"
+        }
+      ],
+      "primaryDocumentation": [
+        {
+          "url": "https://docs.marqo.ai/"
+        }
+      ]
+    }
+  }
