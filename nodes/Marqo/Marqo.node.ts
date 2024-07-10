@@ -11,7 +11,7 @@ export class Marqo implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Marqo',
     name: 'marqo',
-    icon: 'file:marqo.png',
+    icon: 'file:Marqo.png',
     group: ['transform'],
     version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
