@@ -23,6 +23,7 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 - Update Document
 - Delete Document
 - Search Documents
+- Get Document
 
 ### Index Operations
 - Create Index
@@ -52,6 +53,9 @@ The node will automatically set the `tensorFields` to include 'title' and 'conte
 #### Search Documents
 - Specify the index name and search query
 - Optionally set additional parameters like limit, filter, and attributes to retrieve
+
+#### Get Document
+- Specify the index name and document ID
 
 ### Index Operations
 
