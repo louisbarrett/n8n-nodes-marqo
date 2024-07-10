@@ -11,7 +11,7 @@ import {
     description: INodeTypeDescription = {
       displayName: 'Marqo',
       name: 'marqo',
-      icon: 'file:marqo.svg',
+      icon: 'file:marqo.png',
       group: ['transform'],
       version: 1,
       subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
@@ -161,6 +161,66 @@ import {
           },
         },
         {
+          displayName: 'Title',
+          name: 'title',
+          type: 'string',
+          default: '',
+          required: true,
+          description: 'Title of the document',
+          displayOptions: {
+            show: {
+              resource: [
+                'document',
+              ],
+              operation: [
+                'create',
+                'update',
+              ],
+            },
+          },
+        },
+        {
+          displayName: 'Content',
+          name: 'content',
+          type: 'string',
+          typeOptions: {
+            rows: 4,
+          },
+          default: '',
+          required: true,
+          description: 'Content of the document',
+          displayOptions: {
+            show: {
+              resource: [
+                'document',
+              ],
+              operation: [
+                'create',
+                'update',
+              ],
+            },
+          },
+        },
+        {
+          displayName: 'Page Number',
+          name: 'pageNumber',
+          type: 'number',
+          default: 1,
+          required: false,
+          description: 'Page number of the document (optional)',
+          displayOptions: {
+            show: {
+              resource: [
+                'document',
+              ],
+              operation: [
+                'create',
+                'update',
+              ],
+            },
+          },
+        },
+        {
           displayName: 'Search Query',
           name: 'searchQuery',
           type: 'string',
@@ -179,23 +239,70 @@ import {
           },
         },
         {
-          displayName: 'Document',
-          name: 'document',
-          type: 'json',
-          default: '',
-          required: true,
-          description: 'Document to create or update',
+          displayName: 'Additional Fields',
+          name: 'additionalFields',
+          type: 'collection',
+          placeholder: 'Add Field',
+          default: {},
           displayOptions: {
             show: {
               resource: [
                 'document',
               ],
               operation: [
-                'create',
-                'update',
+                'search',
               ],
             },
           },
+          options: [
+            {
+              displayName: 'Limit',
+              name: 'limit',
+              type: 'number',
+              default: 10,
+              description: 'Maximum number of results to return',
+            },
+            {
+              displayName: 'Filter',
+              name: 'filter',
+              type: 'json',
+              default: '{}',
+              description: 'Filter to apply to the search (as JSON)',
+            },
+            {
+              displayName: 'Attributes to Retrieve',
+              name: 'attributesToRetrieve',
+              type: 'string',
+              default: '',
+              description: 'Comma-separated list of attributes to retrieve',
+            },
+          ],
+        },
+        {
+          displayName: 'Additional Fields',
+          name: 'additionalFields',
+          type: 'collection',
+          placeholder: 'Add Field',
+          default: {},
+          displayOptions: {
+            show: {
+              resource: [
+                'index',
+              ],
+              operation: [
+                'create',
+              ],
+            },
+          },
+          options: [
+            {
+              displayName: 'Settings',
+              name: 'settings',
+              type: 'json',
+              default: '{}',
+              description: 'Index settings (as JSON)',
+            },
+          ],
         },
       ],
     };
@@ -210,16 +317,37 @@ import {
       for (let i = 0; i < items.length; i++) {
         try {
           if (resource === 'document') {
-            if (operation === 'create') {
+            if (operation === 'create' || operation === 'update') {
               const indexName = this.getNodeParameter('indexName', i) as string;
-              const document = JSON.parse(this.getNodeParameter('document', i) as string);
+              const title = this.getNodeParameter('title', i) as string;
+              const content = this.getNodeParameter('content', i) as string;
+              const pageNumber = this.getNodeParameter('pageNumber', i) as number;
+              
+              const document = {
+                title,
+                content,
+                page_number: pageNumber,
+              };
+              
+              const tensorFields = ['title', 'content'];
+              
               const endpoint = `${credentials.url}/indexes/${indexName}/documents`;
               const options: OptionsWithUri = {
-                method: 'POST',
+                method: operation === 'create' ? 'POST' : 'PUT',
                 uri: endpoint,
-                body: [document],
+                body: {
+                  documents: [document],
+                  tensorFields: tensorFields,
+                },
                 json: true,
               };
+              
+              if (operation === 'update') {
+                const documentId = this.getNodeParameter('documentId', i) as string;
+                options.uri += `/${documentId}`;
+                options.body = document;
+              }
+              
               const response = await this.helpers.request(options);
               returnData.push({ json: response });
             } else if (operation === 'delete') {
@@ -236,24 +364,20 @@ import {
             } else if (operation === 'search') {
               const indexName = this.getNodeParameter('indexName', i) as string;
               const searchQuery = this.getNodeParameter('searchQuery', i) as string;
+              const additionalFields = this.getNodeParameter('additionalFields', i) as {
+                limit?: number;
+                filter?: string;
+                attributesToRetrieve?: string;
+              };
               const endpoint = `${credentials.url}/indexes/${indexName}/search`;
+              const body: any = { q: searchQuery };
+              if (additionalFields.limit) body.limit = additionalFields.limit;
+              if (additionalFields.filter) body.filter = JSON.parse(additionalFields.filter);
+              if (additionalFields.attributesToRetrieve) body.attributes_to_retrieve = additionalFields.attributesToRetrieve.split(',');
               const options: OptionsWithUri = {
                 method: 'POST',
                 uri: endpoint,
-                body: { q: searchQuery },
-                json: true,
-              };
-              const response = await this.helpers.request(options);
-              returnData.push({ json: response });
-            } else if (operation === 'update') {
-              const indexName = this.getNodeParameter('indexName', i) as string;
-              const documentId = this.getNodeParameter('documentId', i) as string;
-              const document = JSON.parse(this.getNodeParameter('document', i) as string);
-              const endpoint = `${credentials.url}/indexes/${indexName}/documents/${documentId}`;
-              const options: OptionsWithUri = {
-                method: 'PUT',
-                uri: endpoint,
-                body: document,
+                body,
                 json: true,
               };
               const response = await this.helpers.request(options);
@@ -262,10 +386,16 @@ import {
           } else if (resource === 'index') {
             if (operation === 'create') {
               const indexName = this.getNodeParameter('indexName', i) as string;
+              const additionalFields = this.getNodeParameter('additionalFields', i) as {
+                settings?: string;
+              };
               const endpoint = `${credentials.url}/indexes/${indexName}`;
+              const body: any = {};
+              if (additionalFields.settings) body.settings = JSON.parse(additionalFields.settings);
               const options: OptionsWithUri = {
                 method: 'POST',
                 uri: endpoint,
+                body,
                 json: true,
               };
               const response = await this.helpers.request(options);

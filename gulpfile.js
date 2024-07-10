@@ -1,13 +1,9 @@
 const gulp = require('gulp');
-const svgmin = require('gulp-svgmin');
-const rename = require('gulp-rename');
 const path = require('path');
 
-gulp.task('build:icons', () => {
-  return gulp.src('nodes/**/*.svg')
-    .pipe(svgmin())
-    .pipe(rename((filePath) => {
-      filePath.dirname = path.join(filePath.dirname, 'dist');
-    }))
-    .pipe(gulp.dest('.'));
+gulp.task('copy-icon', () => {
+  return gulp.src('nodes/Marqo/marqo.png')
+    .pipe(gulp.dest('dist/nodes/Marqo/'));
 });
+
+gulp.task('build:icons', gulp.series('copy-icon'));
