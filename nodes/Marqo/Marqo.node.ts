@@ -79,8 +79,8 @@ export class Marqo implements INodeType {
           {
             name: 'Search',
             value: 'search',
-            description: 'Search for documents',
-            action: 'Search for documents',
+            description: 'Search documents',
+            action: 'Search documents',
           },
           {
             name: 'Update',
@@ -89,7 +89,7 @@ export class Marqo implements INodeType {
             action: 'Update a document',
           },
         ],
-        default: 'search',
+        default: 'create',
       },
       {
         displayName: 'Operation',
@@ -232,19 +232,18 @@ export class Marqo implements INodeType {
         displayName: 'Search Query',
         name: 'searchQuery',
         type: 'string',
-        default: '',
-        required: true,
-        description: 'Query to search for documents',
         displayOptions: {
           show: {
-            resource: [
-              'document',
-            ],
             operation: [
               'search',
             ],
+            resource: [
+              'document',
+            ],
           },
         },
+        default: '',
+        description: 'Query string to search for',
       },
       {
         displayName: 'Additional Fields',
@@ -254,11 +253,11 @@ export class Marqo implements INodeType {
         default: {},
         displayOptions: {
           show: {
-            resource: [
-              'document',
-            ],
             operation: [
               'search',
+            ],
+            resource: [
+              'document',
             ],
           },
         },
@@ -268,21 +267,94 @@ export class Marqo implements INodeType {
             name: 'limit',
             type: 'number',
             default: 10,
-            description: 'Maximum number of results to return',
+            description: 'Maximum number of documents to return',
           },
           {
-            displayName: 'Filter',
-            name: 'filter',
-            type: 'json',
-            default: '{}',
-            description: 'Filter to apply to the search (as JSON)',
+            displayName: 'Offset',
+            name: 'offset',
+            type: 'number',
+            default: 0,
+            description: 'Number of documents to skip',
+          },
+          {
+            displayName: 'Show Highlights',
+            name: 'showHighlights',
+            type: 'boolean',
+            default: true,
+            description: 'Whether to return highlights for document matches',
+          },
+          {
+            displayName: 'Search Method',
+            name: 'searchMethod',
+            type: 'options',
+            options: [
+              {
+                name: 'Tensor',
+                value: 'TENSOR',
+                description: 'Neural/semantic search',
+              },
+              {
+                name: 'Lexical',
+                value: 'LEXICAL',
+                description: 'Keyword-based search',
+              },
+              {
+                name: 'Hybrid',
+                value: 'HYBRID',
+                description: 'Combination of tensor and lexical search',
+              },
+            ],
+            default: 'TENSOR',
+            description: 'The search method to use',
           },
           {
             displayName: 'Attributes to Retrieve',
             name: 'attributesToRetrieve',
             type: 'string',
             default: '',
-            description: 'Comma-separated list of attributes to retrieve',
+            description: 'Comma-separated list of attributes to return in the search response',
+          },
+          {
+            displayName: 'Filter',
+            name: 'filter',
+            type: 'string',
+            default: '',
+            description: 'Filter string in Marqo DSL Language',
+          },
+          {
+            displayName: 'Searchable Attributes',
+            name: 'searchableAttributes',
+            type: 'string',
+            default: '',
+            description: 'Comma-separated list of attributes to search in (only for structured indexes)',
+          },
+          {
+            displayName: 'Hybrid Parameters',
+            name: 'hybridParameters',
+            type: 'json',
+            default: '',
+            description: 'Parameters for hybrid search (only when searchMethod is HYBRID)',
+          },
+          {
+            displayName: 'Score Modifiers',
+            name: 'scoreModifiers',
+            type: 'json',
+            default: '',
+            description: 'Modify scores based on field values',
+          },
+          {
+            displayName: 'Text Query Prefix',
+            name: 'textQueryPrefix',
+            type: 'string',
+            default: '',
+            description: 'Prefix added to text queries when embedding',
+          },
+          {
+            displayName: 'Rerank Depth',
+            name: 'rerankDepth',
+            type: 'number',
+            default: 0,
+            description: 'Number of hits to rerank with global score modifiers',
           },
         ],
       },
@@ -402,20 +474,57 @@ export class Marqo implements INodeType {
             const searchQuery = this.getNodeParameter('searchQuery', i) as string;
             const additionalFields = this.getNodeParameter('additionalFields', i) as {
               limit?: number;
-              filter?: string;
+              offset?: number;
+              showHighlights?: boolean;
+              searchMethod?: string;
               attributesToRetrieve?: string;
+              filter?: string;
+              searchableAttributes?: string;
+              hybridParameters?: string;
+              scoreModifiers?: string;
+              textQueryPrefix?: string;
+              rerankDepth?: number;
             };
+
             const endpoint = `${credentials.url}/indexes/${indexName}/search`;
             const body: any = { q: searchQuery };
+
+            // Add optional parameters
             if (additionalFields.limit) body.limit = additionalFields.limit;
-            if (additionalFields.filter) body.filter = JSON.parse(additionalFields.filter);
-            if (additionalFields.attributesToRetrieve) body.attributes_to_retrieve = additionalFields.attributesToRetrieve.split(',');
+            if (additionalFields.offset) body.offset = additionalFields.offset;
+            if (additionalFields.showHighlights !== undefined) body.showHighlights = additionalFields.showHighlights;
+            if (additionalFields.searchMethod) body.searchMethod = additionalFields.searchMethod;
+            if (additionalFields.attributesToRetrieve) {
+              body.attributesToRetrieve = additionalFields.attributesToRetrieve.split(',').map(attr => attr.trim());
+            }
+            if (additionalFields.filter) body.filter = additionalFields.filter;
+            if (additionalFields.searchableAttributes) {
+              body.searchableAttributes = additionalFields.searchableAttributes.split(',').map(attr => attr.trim());
+            }
+            if (additionalFields.hybridParameters) {
+              try {
+                body.hybridParameters = JSON.parse(additionalFields.hybridParameters);
+              } catch (error) {
+                throw new NodeOperationError(this.getNode(), 'Invalid JSON in hybrid parameters');
+              }
+            }
+            if (additionalFields.scoreModifiers) {
+              try {
+                body.scoreModifiers = JSON.parse(additionalFields.scoreModifiers);
+              } catch (error) {
+                throw new NodeOperationError(this.getNode(), 'Invalid JSON in score modifiers');
+              }
+            }
+            if (additionalFields.textQueryPrefix) body.textQueryPrefix = additionalFields.textQueryPrefix;
+            if (additionalFields.rerankDepth !== undefined) body.rerankDepth = additionalFields.rerankDepth;
+
             const options: OptionsWithUri = {
               method: 'POST',
               uri: endpoint,
               body,
               json: true,
             };
+
             const response = await this.helpers.request(options);
             returnData.push({ json: response });
           }
