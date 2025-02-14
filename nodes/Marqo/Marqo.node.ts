@@ -287,11 +287,12 @@ export class Marqo implements INodeType {
         ],
       },
       {
-        displayName: 'Additional Fields',
-        name: 'additionalFields',
-        type: 'collection',
-        placeholder: 'Add Field',
-        default: {},
+        displayName: 'Model',
+        name: 'model',
+        type: 'options',
+        default: 'hf/e5-base-v2',
+        required: true,
+        description: 'The model to use for vectorizing content',
         displayOptions: {
           show: {
             resource: [
@@ -303,13 +304,29 @@ export class Marqo implements INodeType {
           },
         },
         options: [
-          {
-            displayName: 'Settings',
-            name: 'settings',
-            type: 'json',
-            default: '{}',
-            description: 'Index settings (as JSON)',
-          },
+          { name: 'Marqo Stella EN 400M v5', value: 'Marqo/dunzhang-stella_en_400M_v5' },
+          { name: 'MiniLM L6 v1', value: 'sentence-transformers/all-MiniLM-L6-v1' },
+          { name: 'MiniLM L6 v2', value: 'sentence-transformers/all-MiniLM-L6-v2' },
+          { name: 'MiniLM L12 v2', value: 'sentence-transformers/all-MiniLM-L12-v2' },
+          { name: 'MPNet Base v1', value: 'sentence-transformers/all-mpnet-base-v1' },
+          { name: 'MPNet Base v2', value: 'sentence-transformers/all-mpnet-base-v2' },
+          { name: 'STSB XLM R Multilingual', value: 'sentence-transformers/stsb-xlm-r-multilingual' },
+          { name: 'E5 Small', value: 'hf/e5-small' },
+          { name: 'E5 Base', value: 'hf/e5-base' },
+          { name: 'E5 Large', value: 'hf/e5-large' },
+          { name: 'E5 Small v2', value: 'hf/e5-small-v2' },
+          { name: 'E5 Base v2', value: 'hf/e5-base-v2' },
+          { name: 'E5 Large v2', value: 'hf/e5-large-v2' },
+          { name: 'BGE Small EN v1.5', value: 'hf/bge-small-en-v1.5' },
+          { name: 'BGE Base EN v1.5', value: 'hf/bge-base-en-v1.5' },
+          { name: 'BGE Large EN v1.5', value: 'hf/bge-large-en-v1.5' },
+          { name: 'Multilingual E5 Small', value: 'hf/multilingual-e5-small' },
+          { name: 'Multilingual E5 Base', value: 'hf/multilingual-e5-base' },
+          { name: 'Multilingual E5 Large', value: 'hf/multilingual-e5-large' },
+          { name: 'GIST Large Embedding v0', value: 'hf/GIST-large-Embedding-v0' },
+          { name: 'Snowflake Arctic Embed M', value: 'hf/snowflake-arctic-embed-m' },
+          { name: 'Snowflake Arctic Embed L', value: 'hf/snowflake-arctic-embed-l' },
+          { name: 'Ember v1', value: 'hf/ember-v1' },
         ],
       },
     ],
@@ -405,18 +422,18 @@ export class Marqo implements INodeType {
         } else if (resource === 'index') {
           if (operation === 'create') {
             const indexName = this.getNodeParameter('indexName', i) as string;
-            const additionalFields = this.getNodeParameter('additionalFields', i) as {
-              settings?: string;
-            };
+            const model = this.getNodeParameter('model', i) as string;
+            
             const endpoint = `${credentials.url}/indexes/${indexName}`;
-            const body: any = {};
-            if (additionalFields.settings) body.settings = JSON.parse(additionalFields.settings);
             const options: OptionsWithUri = {
               method: 'POST',
               uri: endpoint,
-              body,
+              body: {
+                model: model,
+              },
               json: true,
             };
+            
             const response = await this.helpers.request(options);
             returnData.push({ json: response });
           } else if (operation === 'delete') {
