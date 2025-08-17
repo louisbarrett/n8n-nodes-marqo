@@ -4,8 +4,9 @@ import {
   INodeType,
   INodeTypeDescription,
   NodeOperationError,
+  IRequestOptions,
+  NodeConnectionType,
 } from 'n8n-workflow';
-import { OptionsWithUri } from 'request-promise-native';
 
 export class Marqo implements INodeType {
   description: INodeTypeDescription = {
@@ -13,14 +14,15 @@ export class Marqo implements INodeType {
     name: 'marqo',
     icon: 'file:Marqo.png',
     group: ['transform'],
+    usableAsTool: true,
     version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
     description: 'Interact with Marqo API',
     defaults: {
       name: 'Marqo',
     },
-    inputs: ['main'],
-    outputs: ['main'],
+    inputs: [NodeConnectionType.Main],
+    outputs: [NodeConnectionType.Main],
     credentials: [
       {
         name: 'marqoApi',
@@ -429,9 +431,9 @@ export class Marqo implements INodeType {
             const tensorFields = ['title', 'content'];
             
             const endpoint = `${credentials.url}/indexes/${indexName}/documents`;
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: operation === 'create' ? 'POST' : 'PUT',
-              uri: endpoint,
+              url: endpoint,
               body: {
                 documents: [document],
                 tensorFields: tensorFields,
@@ -441,7 +443,7 @@ export class Marqo implements INodeType {
             
             if (operation === 'update') {
               const documentId = this.getNodeParameter('documentId', i) as string;
-              options.uri += `/${documentId}`;
+              options.url += `/${documentId}`;
               options.body = document;
             }
             
@@ -451,9 +453,9 @@ export class Marqo implements INodeType {
             const indexName = this.getNodeParameter('indexName', i) as string;
             const documentId = this.getNodeParameter('documentId', i) as string;
             const endpoint = `${credentials.url}/indexes/${indexName}/documents/${documentId}`;
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: 'DELETE',
-              uri: endpoint,
+              url: endpoint,
               json: true,
             };
             const response = await this.helpers.request(options);
@@ -462,9 +464,9 @@ export class Marqo implements INodeType {
             const indexName = this.getNodeParameter('indexName', i) as string;
             const documentId = this.getNodeParameter('documentId', i) as string;
             const endpoint = `${credentials.url}/indexes/${indexName}/documents/${documentId}`;
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: 'GET',
-              uri: endpoint,
+              url: endpoint,
               json: true,
             };
             const response = await this.helpers.request(options);
@@ -518,9 +520,9 @@ export class Marqo implements INodeType {
             if (additionalFields.textQueryPrefix) body.textQueryPrefix = additionalFields.textQueryPrefix;
             if (additionalFields.rerankDepth !== undefined) body.rerankDepth = additionalFields.rerankDepth;
 
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: 'POST',
-              uri: endpoint,
+              url: endpoint,
               body,
               json: true,
             };
@@ -534,9 +536,9 @@ export class Marqo implements INodeType {
             const model = this.getNodeParameter('model', i) as string;
             
             const endpoint = `${credentials.url}/indexes/${indexName}`;
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: 'POST',
-              uri: endpoint,
+              url: endpoint,
               body: {
                 model: model,
               },
@@ -548,18 +550,18 @@ export class Marqo implements INodeType {
           } else if (operation === 'delete') {
             const indexName = this.getNodeParameter('indexName', i) as string;
             const endpoint = `${credentials.url}/indexes/${indexName}`;
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: 'DELETE',
-              uri: endpoint,
+              url: endpoint,
               json: true,
             };
             const response = await this.helpers.request(options);
             returnData.push({ json: response });
           } else if (operation === 'list') {
             const endpoint = `${credentials.url}/indexes`;
-            const options: OptionsWithUri = {
+            const options: IRequestOptions = {
               method: 'GET',
-              uri: endpoint,
+              url: endpoint,
               json: true,
             };
             const response = await this.helpers.request(options);
