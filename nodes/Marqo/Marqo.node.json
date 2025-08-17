@@ -2,6 +2,7 @@
     "node": "n8n-nodes-base.marqo",
     "nodeVersion": "1.0",
     "codexVersion": "1.0",
+    "usableAsTool": true,
     "categories": [
       "Search"
     ],
